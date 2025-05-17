@@ -1,0 +1,27 @@
+name: "Deploy file to server"
+description: "deploy all files to remote server"
+inputs:
+  HOST:
+    required: true
+  USERNAME:
+    required: true
+  PRIVATE_KEY:
+    required: false
+  PASSWORD:
+    required: false
+  PORT:
+    required: false
+    default: "22"
+    description: "SSH port, default is 22"
+  LOCAL_PATH:
+    required: false
+  FILES:
+    required: false
+  REMOTE_PATH:
+    required: true
+  CLEAN_REMOTE:
+    required: false
+    default: "false"
+runs:
+  using: "node20"
+  main: "index.js"

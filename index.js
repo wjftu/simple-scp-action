@@ -7,9 +7,9 @@ try {
   const username = core.getInput('USERNAME');
   const privateKey = core.getInput('PRIVATE_KEY');
   const password = core.getInput('PASSWORD');
-  const localPath = core.getInput('LOCAL_PATH');
+  const localDir = core.getInput('LOCAL_DIR');
   const files = core.getInput('FILES');
-  const remotePath = core.getInput('REMOTE_PATH');
+  const remoteDir = core.getInput('REMOTE_DIR');
   const archiveFile = 'archiveFile.tar.gz';
   const keyPath = `id_temp_key`;
   const cleanRemote = core.getInput('cleanRemote').toLowerCase() === 'true';
@@ -38,44 +38,45 @@ try {
     throw new Error("Either privateKey or password must be provided");
   }
 
-  let tarList = [];
+  let dirForScp = 'dir_for_scp';
 
-  if(localPath) {
-    if (!fs.existsSync(localPath)) {
-      throw new Error(`Local path ${localPath} does not exist`);
-    } else if (!fs.lstatSync(localPath).isDirectory()) {
-      throw new Error(`Local path ${localPath} is not directory`);
+  fs.mkdir(dirForScp, (err) => {
+    if(err) {
+      console.error(err);
     }
-    tarList.push(`${localPath}/*`);
+  });
+  
+  if(localDir) {
+    execSync(`mv ${localDir}/* ${dirForScp}/`, { stdio: 'inherit' });
   }
 
   if(files) {
     files.split(',').forEach(file => {
       const trimmed = file.trim();
-      tarList.push(trimmed);
+      execSync(`mv ${trimmed} ${dirForScp}/`, { stdio: 'inherit' });
     });
   }
 
-  let tarFiles = tarList.join(' ');
 
-  console.log(`🔧 Archiving ${tarFiles} into ${archiveFile}`);
-  execSync(`tar -czf ${archiveFile} ${tarFiles} `, { stdio: 'inherit' });
 
-  const prepareRemoteCmd = cleanRemote ? `mkdir -p ${remotePath} && rm -rf ${remotePath}/*` : `mkdir -p ${remotePath}`;
+  console.log(`🔧 Archiving files into ${archiveFile}`);
+  execSync(`tar -czf ${archiveFile} -C ${dirForScp} .`, { stdio: 'inherit' });
 
-  console.log(`🧹 Preparing remote directory: ${remotePath}`);
+  const prepareRemoteCmd = cleanRemote ? `mkdir -p ${remoteDir} && rm -rf ${remoteDir}/*` : `mkdir -p ${remoteDir}`;
+
+  console.log(`🧹 Preparing remote directory: ${remoteDir}`);
   execSync(
     `${sshCommandBase} ${username}@${host} "${prepareRemoteCmd}"`,
     { stdio: 'inherit' }
   );
 
-  console.log(`📦 Uploading ${archiveFile} to ${username}@${host}:${remotePath}`);
+  console.log(`📦 Uploading ${archiveFile} to ${username}@${host}:${remoteDir}`);
   execSync(
-    `${scpCommand} ${archiveFile} ${username}@${host}:${remotePath}/`,
+    `${scpCommand} ${archiveFile} ${username}@${host}:${remoteDir}/`,
     { stdio: 'inherit' }
   );
 
-  const sshExtractCmd = `cd ${remotePath} && tar -xzf ${archiveFile} && rm -f ${archiveFile}`;
+  const sshExtractCmd = `cd ${remoteDir} && tar -xzf ${archiveFile} && rm -f ${archiveFile}`;
 
   console.log(`📂 Extracting on remote and cleaning up...`);
   execSync(

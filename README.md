@@ -4,7 +4,8 @@ This GitHub Action deploys local files to a remote Linux server using SCP.
 
 ## 📦 Features
 
-- Compress a local folder into a `.tar.gz` archive
+- Move files to a local folder
+- Compress the local folder into a `.tar.gz` archive
 - Optionally cleans remote directory before extracting
 - Automatically creates the remote directory if it doesn’t exist
 - Upload using either **SSH private key** or **password**
